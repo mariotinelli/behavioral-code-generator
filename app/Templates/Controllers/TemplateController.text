@@ -1,0 +1,10 @@
+<?php
+
+namespace App\Http\Controllers;
+
+//exports
+
+class //ClassName extends Controller
+{
+    //methods
+}
