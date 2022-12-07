@@ -1,3 +1,5 @@
-    public function //method(){
+    public function //method(Request $request){
         //behavioral
+
+        //return
     }

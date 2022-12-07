@@ -14,7 +14,7 @@ class Event extends Model
      *
      * @var string[]
      */
-    protected $fillable = [ 'id',  'title',  'description',  'participants', ];
+    protected $fillable = ['title',  'description',  'participants'];
 
     protected $table = 'event';
 

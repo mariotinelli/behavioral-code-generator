@@ -2,19 +2,23 @@
 
 namespace App\Actions;
 
+use App\Http\Traits\DSLTrait;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Yaml\Yaml;
 
-use function PHPUnit\Framework\matches;
 
 class BehavioralGenerator
 {
+
+    use DSLTrait;
+
     private $data;
     private $contentToRouteFile;
 
-    public function initProcess() {
-        $this->getData();
+    public function initProcess()
+    {
+        $this->loadData();
 
         $this->makeModels();
         $this->makeControllers();
@@ -22,167 +26,127 @@ class BehavioralGenerator
         $this->makeMigrations();
     }
 
-    private function getData() {
+    private function loadData(): void
+    {
         $openApi = Storage::get('openapi_doc\events.yaml');
-        $openApiParse = Yaml::parse($openApi);
-
-        $this->data = $openApiParse;
+        $this->data = Yaml::parse($openApi);
     }
 
-    private function makeModels() {
+    private function makeModels() : void
+    {
 
         $schemas = $this->data['components']['schemas'];
 
         foreach ($schemas as $className => $schema) {
-            $fillable = 'protected $fillable = [';
+
+            $fillable = '';
             $properties = $schema['properties'];
             foreach ($properties as $key => $property) {
-                $fillable = "$fillable '$key', ";
+                $fillable = $fillable == '' ? "'$key'" : "$fillable,  '$key'";
             }
-            $fillable = "$fillable]";
 
             $tableName = $this->camelCaseToSnakeCase($className);
 
-            // Models
-            $modelFileDir = __DIR__ . '\..\Templates\Models\TemplateModel.text';
-            $modelFileContent = file_get_contents($modelFileDir);
-            $modelFileContent = str_replace('//fillable', $fillable, $modelFileContent);
-            $modelFileContent = str_replace('//ClassName', $className, $modelFileContent);
-            $modelFileContent = str_replace('//table', $tableName, $modelFileContent);
-
-            $fileDir = __DIR__ . "\..\Models\\$className.php";
-            $file = fopen($fileDir, 'w');
-            fwrite($file, $modelFileContent);
-            fclose($file);
-
+            $fileDirTemplate = __DIR__ . '\..\Templates\Models\TemplateModel.text';
+            $fileDirWrite = __DIR__ . "\..\Models\\$className.php";
+            $modelStrings = ['//fillable' => $fillable, '//ClassName' => $className, '//table' => $tableName];
+            $this->replaceWriteTemplates($fileDirTemplate, $fileDirWrite, $modelStrings);
         }
     }
 
-    private function makeControllers() {
+    private function makeControllers(): void
+    {
 
         $schemas = $this->data['components']['schemas'];
 
         foreach ($schemas as $className => $schema) {
-            $controllerFileDir = __DIR__ . '\..\Templates\Controllers\TemplateController.text';
-            $controllerFileContent = file_get_contents($controllerFileDir);
-            $controllerFileContent = str_replace('//ClassName', $className . 'Controller', $controllerFileContent);
+            $controllerName = $className . "Controller";
+            $fileDirTemplate = __DIR__ . '\..\Templates\Controllers\TemplateController.text';
+            $fileDirWrite = __DIR__ . "\..\Http\Controllers\\$controllerName.php";
+            $modelStrings = ['//ClassName' => $controllerName];
 
-            $fileDir = __DIR__ . "\..\Http\Controllers\\$className" . "Controller.php";
-            $file = fopen($fileDir, 'w');
-            fwrite($file, $controllerFileContent);
-            fclose($file);
-
+            $this->replaceWriteTemplates($fileDirTemplate, $fileDirWrite, $modelStrings);
             $this->makeMethods($className);
         }
+
     }
 
-    private function makeMethods($className) {
+    private function makeMethods(String $className): string
+    {
 
         $paths = $this->data['paths'];
         $contentToControllerFile = "\n\n";
         $exportsToControllerFile = "\n";
-        foreach ($paths as $route => $path) {
-            foreach ($path as $method => $pathContent) {
-                $camelClassName = $this->prepareClassName($route);
+
+        foreach ($paths as $path => $methods) {
+
+            foreach ($methods as $methodContent) {
+
+                $camelClassName = $this->prepareClassName($path);
+
                 if($camelClassName == $className) {
-
-                    $methodFileDir = __DIR__ . '\..\Templates\Methods\TemplateMethod.text';
-                    $methodFileContent = file_get_contents($methodFileDir);
-                    $methodFileContent = str_replace('//method', $method, $methodFileContent);
-
-                    [$behavior, $modelName] = $this->makeBehavior($pathContent);
-                    $methodFileContent = str_replace('//behavioral', $behavior, $methodFileContent);
-
-                    $contentToControllerFile = $contentToControllerFile . $methodFileContent . "\n";
-
-
-                    $exportFileDir = __DIR__ . '\..\Templates\Controllers\TemplateExportModel.text';
-                    $exportFileContent = file_get_contents($exportFileDir);
-                    $exportFileContent = str_replace('//model', $modelName, $exportFileContent);
-                    $exportsToControllerFile = $exportsToControllerFile . $exportFileContent . "\n";
-
+                    [$contentToControllerFile, $exportsToControllerFile] = $this->makeBehavior($methodContent, $contentToControllerFile, $exportsToControllerFile);
                 }
 
             }
         }
 
-        $fileDir = __DIR__ . "\..\Http\Controllers\\$className" . "Controller.php";
-        $methodFileContent = file_get_contents($fileDir);
-        $methodFileContent = str_replace('//methods', $contentToControllerFile, $methodFileContent);
-        $methodFileContent = str_replace('//exports', $exportsToControllerFile, $methodFileContent);
-        $file = fopen($fileDir, 'w');
-        fwrite($file, $methodFileContent);
-        fclose($file);
+        $fileDirTemplate = __DIR__ . "\..\Http\Controllers\\$className" . "Controller.php";
+        $modelStrings = ['//methods' => $contentToControllerFile, '//exports' => $exportsToControllerFile];
+        $this->replaceWriteTemplates($fileDirTemplate, $fileDirTemplate, $modelStrings);
 
         return $contentToControllerFile;
     }
 
-    private function DSLModel($script, $pathContent) {
-        $result = preg_match_all("/Model\((.*?)\)/", $script, $matches);
-        if ($result) {
-            $modelName = $matches[1][0];
-            return $this->DSLMethod($script, $modelName, $pathContent);
-        }
-        return false;
-    }
+    private function makeBehavior(
+        array $methodContent,
+        String $contentToControllerFile,
+        String $exportsToControllerFile
+    ): array | false
+    {
 
+        $description = $methodContent['description'];
 
-    private function DSLMethod($script, $modelName, $pathContent) {
-
-        $hasPost = preg_match_all("/post\((.*?)\)/", $script, $matches);
-        if ($hasPost) {
-            $requestBody = $pathContent['requestBody']['content']['application/json']['schema'];
-            $attributes = isset($requestBody['$ref']) ? $this->getComponentAttributes($modelName) : $this->getRequestAttributes($requestBody);
-
-            // Create
-            $createFileDir = __DIR__ . '\..\Templates\Controllers\TemplateCreate.text';
-            $fileContent = file_get_contents($createFileDir);
-            $fileContent = str_replace('//model', $modelName, $fileContent);
-            $fileContent = str_replace('//attributes', $attributes, $fileContent);
-
-            return [$fileContent, $modelName];
+        if (!strpos($description, '<dsl>')) {
+            return false;
         }
 
-        $hasGet = preg_match_all("/get\((.*?)\)/", $script, $matches);
-        if ($hasPost) {
-            return 'get';
-        }
-
-        $hasUpdate = preg_match_all("/update\((.*?)\)/", $script, $matches);
-        if ($hasPost) {
-            return 'update';
-        }
-
-        $hasPatch = preg_match_all("/patch\((.*?)\)/", $script, $matches);
-        if ($hasPost) {
-            return 'patch';
-        }
-
-        $hasDelete = preg_match_all("/delete\((.*?)\)/", $script, $matches);
-        if ($hasPost) {
-            return 'delete';
-        }
-
-        return false;
-    }
-
-
-    private function makeBehavior($pathContent) {
-
-        $description = $pathContent['description'];
-        $descriptionParts = explode('%', $description);
-
+        $descriptionParts = explode('<dsl>', $description);
         $scripts = explode("\n", trim($descriptionParts[ count($descriptionParts) - 2]));
 
-        foreach ($scripts as $script) {
-            [$fileContent, $modelName] = $this->DSLModel($script, $pathContent);
+        $fileDirTemplateMethod = __DIR__ . '\..\Templates\Methods\TemplateMethod.text';
+        $fileDirTemplateExport = __DIR__ . '\..\Templates\Controllers\TemplateExportModel.text';
+
+        foreach ($scripts as $key => $script) {
+
+            [$hasModel, $behavior, $modelName] = $this->checkModelExists($script, $methodContent);
+
+            if ($hasModel) {
+                $nameMethod = $this->snakeCaseToCamelCase($methodContent['operationId']);
+                $modelStrings = ['//method' => $nameMethod, '//behavioral' => $behavior];
+                $contentToControllerFile = $contentToControllerFile . $this->replaceTemplates($fileDirTemplateMethod, $modelStrings) . "\n";
+
+                // Exportações
+                $modelStrings = ['//model' => $modelName];
+                $exportsToControllerFile = $exportsToControllerFile . $this->replaceTemplates($fileDirTemplateExport, $modelStrings) . "\n";
+            }
+
+            [$hasReturn, $return] = $this->checkReturnExists($script, $methodContent);
+            if ($hasReturn) {
+                $contentToControllerFile = str_replace('//return', $return, $contentToControllerFile);
+            }
+
+
+
+
         }
 
-        return [$fileContent, $modelName];
+        return [$contentToControllerFile, $exportsToControllerFile];
     }
 
 
-    private function makeRoutes() {
+    private function makeRoutes(): void
+    {
 
         $paths = $this->data['paths'];
 
@@ -190,12 +154,14 @@ class BehavioralGenerator
             foreach ($path as $method => $pathContent) {
 
                 $camelClassName = $this->prepareClassName($namePath);
+                $functionName = $this->snakeCaseToCamelCase($pathContent['operationId']);
 
                 $routeFileDir = __DIR__ . '\..\Templates\Routes\TemplateRoute.text';
                 $routeFileContent = file_get_contents($routeFileDir);
                 $routeFileContent = str_replace('//path', $namePath, $routeFileContent);
                 $routeFileContent = str_replace('//Controller', $camelClassName . "Controller", $routeFileContent);
                 $routeFileContent = str_replace('//method', $method, $routeFileContent);
+                $routeFileContent = str_replace('//functionName', $functionName, $routeFileContent);
 
                 $this->contentToRouteFile = $this->contentToRouteFile . $routeFileContent;
             }
@@ -210,7 +176,8 @@ class BehavioralGenerator
         fclose($file);
     }
 
-    private function makeMigrations() {
+    private function makeMigrations(): void
+    {
 
         $schemas = $this->data['components']['schemas'];
         foreach ($schemas as $className => $schema) {
@@ -218,7 +185,6 @@ class BehavioralGenerator
             $tableName = $this->camelCaseToSnakeCase($className);
 
             $properties = $schema['properties'];
-
             $migrationFileDir = __DIR__ . '\..\Templates\Migrations\TemplateMigration.text';
             $migrationFileContent = file_get_contents($migrationFileDir);
             $migrationFileContent = str_replace('//table', $tableName, $migrationFileContent);
@@ -234,7 +200,8 @@ class BehavioralGenerator
         }
     }
 
-    private function makeCols($properties, $tableName){
+    private function makeCols(array $properties, String $tableName): void
+    {
 
         $contentToMigrationFile = "\n";
 
@@ -255,11 +222,13 @@ class BehavioralGenerator
         fclose($file);
     }
 
-    private function transformToSigular($attribute) {
+    private function transformToSigular(String $attribute): string
+    {
         return (preg_match('~s$~i', $attribute) > 0) ? rtrim($attribute, 's') : $attribute;
     }
 
-    private function prepareClassName($namePath){
+    private function prepareClassName(String $namePath): string
+    {
 
         $explodedRoutes = explode('/', $namePath);
         $originalClassName = $this->transformToSigular($explodedRoutes[0] == '' ? $explodedRoutes[1] : $$explodedRoutes[0]);
@@ -272,18 +241,19 @@ class BehavioralGenerator
         return str_replace(' ', '', $camelClassName);
     }
 
-    function camelCaseToSnakeCase($string)
+    function camelCaseToSnakeCase(String $string): string
     {
         return strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $string));
     }
 
-    function snakeCaseToCamelCase($string)
+    function snakeCaseToCamelCase(String $string): string
     {
         return lcfirst(str_replace(' ', '', ucwords(str_replace('_', ' ', $string))));
     }
 
 
-    private function getComponentAttributes($modelName) {
+    private function getComponentAttributes(String $modelName): string
+    {
 
         $attributes = '';
         $schemas = $this->data['components']['schemas'];
@@ -292,24 +262,63 @@ class BehavioralGenerator
             if($className == $modelName) {
                 $properties = $schema['properties'];
                 foreach ($properties as $attribute => $property) {
-                    $attributes = $attributes == '' ? "['$attribute'" : "$attributes, '$attribute'";
+                    $request = '$request->' . $attribute;
+                    $attributes = $attributes == '' ? "'$attribute' => $request \n" : "$attributes, '$attribute' => $request \n";
                 }
-                return $attributes . "]";
+                return $attributes;
             }
         }
 
         return $attributes;
     }
 
-    private function getRequestAttributes($requestBody) {
+    private function getRequestAttributes(array $requestBody): string
+    {
 
         $attributes = '';
         $properties = $requestBody['properties'];
 
         foreach ($properties as $attribute => $property) {
-            $attributes = $attributes == '' ? "['$attribute'" : "$attributes, '$attribute'";
+            $request = '$request->' . $attribute;
+            $attributes = $attributes == '' ? "'$attribute' => $request" : "$attributes, \n            '$attribute' => $request";
         }
-        return $attributes . "]";
 
+        return $attributes . "\n       ";
+
+    }
+
+    private function replaceWriteTemplates(String $fileDirTemplate, String $fileDirWrite, array $modelStrings): void
+    {
+
+        $fileContentTemplate = file_get_contents($fileDirTemplate);
+
+        /*
+            + templateString => é o index do array, que contém a string que serve como template para o replace
+            + modelString => é o valor do array, que contém a string que será inserida no lugar do templateString
+        */
+        foreach ($modelStrings as $templateString => $modelString) {
+            $fileContentTemplate = str_replace($templateString, $modelString, $fileContentTemplate);
+        }
+
+        $file = fopen($fileDirWrite, 'w');
+        fwrite($file, $fileContentTemplate);
+        fclose($file);
+
+    }
+
+    private function replaceTemplates(String $fileDirTemplate, array $modelStrings): string
+    {
+
+        $fileContentTemplate = file_get_contents($fileDirTemplate);
+
+        /*
+            + templateString => é o index do array, que contém a string que serve como template para o replace
+            + modelString => é o valor do array, que contém a string que será inserida no lugar do templateString
+        */
+        foreach ($modelStrings as $templateString => $modelString) {
+            $fileContentTemplate = str_replace($templateString, $modelString, $fileContentTemplate);
+        }
+
+        return $fileContentTemplate;
     }
 }

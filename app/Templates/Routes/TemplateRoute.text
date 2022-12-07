@@ -1,1 +1,1 @@
-$router->//method('//path', '//Controller@//method');
+$router->//method('//path', '//Controller@//functionName');

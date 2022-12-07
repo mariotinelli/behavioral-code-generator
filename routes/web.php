@@ -20,16 +20,11 @@ $router->get('/', function () use ($router) {
 });
 
 
-$router->post('/events', 'EventController@post');
-$router->get('/events', 'EventController@get');
-$router->get('/events/{eventId}', 'EventController@get');
-$router->put('/events/{eventId}', 'EventController@put');
-$router->delete('/events/{eventId}', 'EventController@delete');
-$router->post('/event_types', 'EventTypeController@post');
-$router->get('/event_types', 'EventTypeController@get');
-$router->get('/event_types/{eventTypeId}', 'EventTypeController@get');
-$router->put('/event_types/{eventTypeId}', 'EventTypeController@put');
-$router->delete('/event_types/{eventTypeId}', 'EventTypeController@delete');
+$router->post('/events', 'EventController@addEvent');
+$router->get('/events', 'EventController@getEvents');
+$router->get('/events/{eventId}', 'EventController@getEventById');
+$router->put('/events/{eventId}', 'EventController@updateEvent');
+$router->delete('/events/{eventId}', 'EventController@deleteEvent');
 
 
 

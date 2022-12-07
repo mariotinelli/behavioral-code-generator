@@ -14,7 +14,7 @@ class //ClassName extends Model
      *
      * @var string[]
      */
-    //fillable;
+    protected $fillable = [//fillable];
 
     protected $table = '//table';
 
