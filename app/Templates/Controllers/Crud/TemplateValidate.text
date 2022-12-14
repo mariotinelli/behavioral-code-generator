@@ -1,0 +1,3 @@
+$validated = $this->validate($request, [
+            //validations
+        ]);

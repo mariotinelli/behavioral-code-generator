@@ -26,10 +26,5 @@ $app = require __DIR__.'/../bootstrap/app.php';
 |
 */
 
-use App\Actions\BehavioralGenerator;
-
-$behaviralGenerator = new BehavioralGenerator;
-
-$behaviralGenerator->initProcess();
 
 $app->run();

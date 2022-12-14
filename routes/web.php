@@ -1,9 +1,7 @@
 <?php
 
 /** @var \Laravel\Lumen\Routing\Router $router */
-
-
-
+use App\Actions\BehavioralGenerator;
 /*
 |--------------------------------------------------------------------------
 | Application Routes
@@ -16,15 +14,23 @@
 */
 
 $router->get('/', function () use ($router) {
-        return $router->app->version();
+    return $router->app->version();
 });
 
+$router->post('/init-process', function () use ($router) {
+    $behaviralGenerator = new BehavioralGenerator;
+    $behaviralGenerator->initProcess();
+    return 'Codigo gerado com sucesso';
+});
 
-$router->post('/events', 'EventController@addEvent');
-$router->get('/events', 'EventController@getEvents');
-$router->get('/events/{eventId}', 'EventController@getEventById');
-$router->put('/events/{eventId}', 'EventController@updateEvent');
-$router->delete('/events/{eventId}', 'EventController@deleteEvent');
+//routes
+
+
+
+
+
+
+
 
 
 

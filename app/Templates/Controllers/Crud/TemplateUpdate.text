@@ -1,0 +1,1 @@
+//model::where('//sqlParam', $//requestParam)->update($validated);
