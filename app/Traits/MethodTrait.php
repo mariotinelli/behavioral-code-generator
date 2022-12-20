@@ -70,7 +70,7 @@ trait MethodTrait {
         $description = $methodContent['description'];
 
         if (!strpos($description, '<dsl>')) {
-            $modelStrings = ['//behavioral' => ''];
+            $modelStrings = ['//behavioral' => $this->messageWithoutBehavior()];
             $method = $this->replaceStringTemplates($method, $modelStrings);
             $contentToControllerFile = $contentToControllerFile . $method . "\n";
             return [$contentToControllerFile, $exportsToControllerFile];
@@ -137,4 +137,38 @@ trait MethodTrait {
         return [$contentToControllerFile, trim($exportsToControllerFile)];
     }
 
+
+    private function messageWithoutBehavior() {
+        $message = '
+        /*
+            Método sem comportamento...
+            Você pode especificar qual será o comportamento do método, inserindo um script na documentação de sua api.
+            Esse script precisa ser separado pela tag <dsl>Seu script aqui<dsl> e precisa ser inserido no campo "description" de cada path.
+
+            Um exemplo: \n
+                delete:
+                    description: |
+                        Deletar um evento pelo seu id
+
+                        <dsl>
+                            Seu script aqui
+                        <dsl>
+
+            Como é o script:
+                Manipulação de dados: Model(ModelName)->httpMethod();
+                    + O parâmetro ModelName, é o nome do modelo que será utilizado para inserir os dados;
+                    + O httpMethod é o método http que será utilizado para essa manipulação (post, put, get, patch e delete);
+                    + Ex para inserção de dados: Model(Event)->post();
+                Atribuição de dados: $event = (...);
+                    + A variavel precisa ser iniciada com "$" para determinar que aquilo é uma variável do sistema.
+                    + Ex: $event = Model(Event)->get()->first();
+                Retorno de dados: Return(content, httpCode);
+                    + O parâmetro content, é o conteúdo que será retornado pela api seja ele uma string ou um recurso qualquer;
+                    + O httpCode é o código de retorno.
+                    + Ex: Return("Evento criado com sucesso", 200);
+        */
+        ';
+
+        return $message;
+    }
 }

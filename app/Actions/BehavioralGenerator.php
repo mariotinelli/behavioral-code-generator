@@ -19,19 +19,25 @@ class BehavioralGenerator
     private $data;
     private $contentToRouteFile;
 
-    public function initProcess()
+    public function initProcess($path)
     {
-        $this->loadData();
+        $this->loadData($path);
         $this->makeModels();
         $this->makeControllers();
         $this->makeRoutes();
         $this->makeMigrations();
     }
 
-    private function loadData(): void
+    private function loadData($path)
     {
-        $openApi = Storage::get('openapi\events.yaml');
-        $this->data = Yaml::parse($openApi);
+        $fileContent = file_get_contents($path);
+        $this->data = Yaml::parse($fileContent);
     }
+
+    // private function loadData(): void
+    // {
+    //     $openApi = Storage::get('openapi\events.yaml');
+    //     $this->data = Yaml::parse($openApi);
+    // }
 
 }

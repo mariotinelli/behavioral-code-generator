@@ -17,13 +17,9 @@ $router->get('/', function () use ($router) {
     return $router->app->version();
 });
 
-$router->post('/init-process', function () use ($router) {
-    $behaviralGenerator = new BehavioralGenerator;
-    $behaviralGenerator->initProcess();
-    return 'Codigo gerado com sucesso';
-});
 
 //routes
+
 
 
 
