@@ -36,11 +36,11 @@ php -S 127.0.0.1:8000 -t public/
 
 ## Utilização da documentação OpenAPI
 
-Os modelos e migrations da api, são gerados através do campo **_components_** e sua estrutura é da seguinte forma
+#### Os modelos e migrations da api, são gerados através do campo **_components_**, segue um exemplo de sua estrutura
 ~~~yml
 components:
   schemas:
-    Event:
+    ComponentName:
       required:
         - title 
         - description 
@@ -56,12 +56,12 @@ components:
 ~~~
 
 * **schemas**: É utilizado na ferramenta para pegar quais serão os modelos da api.
-* **Event**: É o nome do modelo.
-* **required**: Um array que recebe quais são os atributos obrigatório daquele modelo, os que não são inseridos, são considerados não obrigatórios.
-* **properties**: são os atributos que aquele modelo vai possuir, cada um tem seu _nome_ e _tipo(type)_. 
-* **default**: é utilizado para a criação da migration desse modelo, caso o atributo tenha um valor default, esse valor será inserido na migration.
+* **ComponentName**: É o nome determinado para esse component, esse nome será utilizado como nome do modelo e da migration.
+* **required**: Um array que recebe quais são os atributos obrigatórios, os que não são inseridos, são considerados não obrigatórios.
+* **properties**: São os atributos desse componente. Pela ferramenta, é utilizados para determinar os atributos e colunas do modelo, cada um tem seu _nome_ e _tipo(type)_. 
+* **default**: Determinar se aquele atributo possui um valor default. É utilizado para a criação da migration desse modelo, caso o atributo tenha um valor default, esse valor será inserido na migration.
 
-Todo o comportamento é inserido no campo **_description_** de cada método HTTP, que possui a seguinte estrutura.
+#### Todo o comportamento é inserido no campo **_description_** de cada método HTTP, segue um exemplo de sua estrutura
 ~~~yml
 post:
   summary: Cadastro de eventos
