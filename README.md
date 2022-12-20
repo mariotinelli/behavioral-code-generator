@@ -109,20 +109,20 @@ description: |
 ~~~
 
 ### Manipulação de dados: Model(ModelName)->httpMethod();
-    1. O parâmetro ModelName, é o nome do modelo que será utilizado para manipulação dos dados;
-    2. O httpMethod é o método http que será utilizado para essa manipulação (post, put, get, patch e delete);
-    3. Exemplos:
-        + Inserção de dados: Model(Event)->post();
-        + Obtenção de um dado: Model(Event)->get()->first();
-        + Obtenção de dados: Model(Event)->get()->all();
-        + Atualizados de dados: Model(Event)->put(&id);
-        + Atualizados de dados: Model(Event)->patch(&id);
-        + Remoção de dados: Model(Event)->delete(&id);
-        + Obs: o caractere '&', significa que será utilizado o parâmetro que foi inserido no path, é necessário colocar o mesmo nome que foi inserido
+1. O parâmetro ModelName, é o nome do modelo que será utilizado para manipulação dos dados;
+2. O httpMethod é o método http que será utilizado para essa manipulação (post, put, get, patch e delete);
+3. Exemplos:
+    + Inserção de dados: Model(Event)->post();
+    + Obtenção de dados: Model(Event)->get()->all();
+    + Obtenção de um dado: Model(Event)->get(&id)->first();
+    + Atualizados de dados: Model(Event)->put(&id);
+    + Atualizados de dados: Model(Event)->patch(&id);
+    + Remoção de dados: Model(Event)->delete(&id);
+    + Obs: o caractere '&', significa que será utilizado o parâmetro que foi inserido no path, é necessário colocar o mesmo nome que foi inserido
 ### Atribuição de dados: $event = (...);
-    1. A variavel precisa ser iniciada com "$" para determinar que aquilo é uma variável do sistema.
-    2. Ex: $event = Model(Event)->get()->first();
+1. A variavel precisa ser iniciada com "$" para determinar que aquilo é uma variável do sistema.
+2. Ex: $event = Model(Event)->get()->first();
 ### Retorno de dados: Return(content, httpCode);
-    1. O parâmetro content, é o conteúdo que será retornado pela api seja ele uma string ou um recurso qualquer;
-    2. O httpCode é o código de retorno.
-    3. Ex: Return("Evento criado com sucesso", 200);
+1. O parâmetro content, é o conteúdo que será retornado pela api seja ele uma string ou um recurso qualquer;
+2. O httpCode é o código de retorno.
+3. Ex: Return("Evento criado com sucesso", 200);
