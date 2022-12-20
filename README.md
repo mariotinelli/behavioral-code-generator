@@ -34,7 +34,7 @@ Para executar o aplicativo em desenvolvimento, você pode executar este comando.
 php -S 127.0.0.1:8000 -t public/
 ```
 
-## Utilização da DSL na documentação OpenAPI
+## Utilização da documentação OpenAPI
 
 Os modelos e migrations da api, são gerados através do campo **_components_** e sua estrutura é da seguinte forma
 ~~~yml
@@ -61,33 +61,68 @@ components:
 * **properties**: são os atributos que aquele modelo vai possuir, cada um tem seu _nome_ e _tipo(type)_. 
 * **default**: é utilizado para a criação da migration desse modelo, caso o atributo tenha um valor default, esse valor será inserido na migration.
 
-Todo o comportamento da api é inserido no campo **_description_** de cada método HTTP.
+Todo o comportamento é inserido no campo **_description_** de cada método HTTP, que possui a seguinte estrutura.
+~~~yml
+post:
+  summary: Cadastro de eventos
+  description: |
+    Criar um novo evento
 
-Todo método HTTP do openAPI possui a seguinte estrutura
+    <dsl>
+      Model(Event)->post();
+      Return('Evento criado com sucesso', 200)
+    <dsl>
+  operationId: addEvent
+  requestBody:
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/Event'
+    required: true
+  responses:
+    "200":
+      description: OK
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Event'
+~~~
+* **post**: É o método http utilizado para aquele determinado caminho.
+* **summary**: Uma descrição curta da api.
+* **description**: A descrição da api, e também onde será inserido o comportamento dela.
+* **operationId**: É um id unico que será utilizado como nome do método em questão. 
+* **requestBody**: É o conteúdo que será utilizado para inserção dos dados (este campo só é utilizados para os métodos post, put e patch).
+* **responses**: É todo o contéudo que esse método pode retornar
+
+## Utilização da DSL
+
+Todo comportamento é inserido aqui
 
 ~~~yml
-/events:
-    post:
-      summary: Cadastro de eventos
-      description: |
-        Criar um novo evento
+description: |
+    Criar um novo evento
 
-        <dsl>
-          Model(Event)->post();
-          Return('Evento criado com sucesso', 200)
-        <dsl>
-      operationId: addEvent
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Event'
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Event'
+    <dsl>
+      Model(Event)->post();
+      Return('Evento criado com sucesso', 200)
+    <dsl>
 ~~~
+
+### Manipulação de dados: Model(ModelName)->httpMethod();
+    1. O parâmetro ModelName, é o nome do modelo que será utilizado para manipulação dos dados;
+    2. O httpMethod é o método http que será utilizado para essa manipulação (post, put, get, patch e delete);
+    3. Exemplos:
+        + Inserção de dados: Model(Event)->post();
+        + Obtenção de um dado: Model(Event)->get()->first();
+        + Obtenção de dados: Model(Event)->get()->all();
+        + Atualizados de dados: Model(Event)->put(&id);
+        + Atualizados de dados: Model(Event)->patch(&id);
+        + Remoção de dados: Model(Event)->delete(&id);
+        + Obs: o caractere '&', significa que será utilizado o parâmetro que foi inserido no path, é necessário colocar o mesmo nome que foi inserido
+### Atribuição de dados: $event = (...);
+    1. A variavel precisa ser iniciada com "$" para determinar que aquilo é uma variável do sistema.
+    2. Ex: $event = Model(Event)->get()->first();
+### Retorno de dados: Return(content, httpCode);
+    1. O parâmetro content, é o conteúdo que será retornado pela api seja ele uma string ou um recurso qualquer;
+    2. O httpCode é o código de retorno.
+    3. Ex: Return("Evento criado com sucesso", 200);
