@@ -87,13 +87,11 @@ trait MethodTrait {
             if ($this->checkExists($script, $regexVar)) {
                 $varName = $this->varProcess($script, $regexVar);
             }
-
             $hasVar = isset($varName);
-
             $regexModel = '/Model\((.*?)\)/';
             if ($this->checkExists($script, $regexModel)) {
 
-                [$behavior, $modelName] = $this->modelProcess($script, $methodContent);
+                [$behavior, $modelName] = $this->modelProcess($script);
 
                 // Validation
                 if(isset($methodContent['requestBody']['content']['application/json']['schema'])) {
@@ -103,13 +101,11 @@ trait MethodTrait {
                     $method = $this->replaceStringTemplates($method, $modelStrings);
 
                 }
-
                 if ($hasVar) {
                     $fileDirTemplate = __DIR__ . '\..\Templates\Controllers\TemplateVar.text';
                     $modelStrings = ['//varName' => $varName, '//varValue' => $behavior];
                     $behavior = trim($this->replaceTemplates($fileDirTemplate, $modelStrings)) . "\n";
                 }
-
                 // Behavior
                 $modelStrings = ['//behavioral' => "\n        " . $behavior . "//behavioral"];
                 $method = $this->replaceStringTemplates($method, $modelStrings);
@@ -123,7 +119,6 @@ trait MethodTrait {
                 }
 
             }
-
             $regexReturn = '/Return\((.*?)\)/';
             if ($this->checkExists($script, $regexReturn)) {
                 $dataReturn = $this->returnProcess($script);
